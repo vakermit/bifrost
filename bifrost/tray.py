@@ -43,9 +43,8 @@ class BifrostTrayApp(toga.App):
         status_cmd = toga.Command(self._show_status, text="Status", group=tray_icon, order=1)
         rules_cmd = toga.Command(self._show_rules, text="Edit Rules", group=tray_icon, order=2)
         browsers_cmd = toga.Command(self._show_browsers, text="Browsers", group=tray_icon, order=3)
-        quit_cmd = toga.Command(self._quit, text="Quit Bifrost", group=tray_icon, order=99)
 
-        self.status_icons.commands.add(status_cmd, rules_cmd, browsers_cmd, quit_cmd)
+        self.status_icons.commands.add(status_cmd, rules_cmd, browsers_cmd)
 
         self.main_window = toga.App.BACKGROUND
 
