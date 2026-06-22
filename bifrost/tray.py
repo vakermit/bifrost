@@ -2,6 +2,7 @@
 
 import subprocess
 import sys
+from pathlib import Path
 
 import toga
 from toga.constants import COLUMN
@@ -11,6 +12,18 @@ from bifrost.db import Database
 from bifrost.platform import get_platform
 
 
+def _find_icon_path() -> str | None:
+    """Find the tray icon — check project icons/ dir and package resources."""
+    candidates = [
+        Path(__file__).parent.parent / "icons" / "tray.png",
+        Path(__file__).parent / "resources" / "tray.png",
+    ]
+    for c in candidates:
+        if c.exists():
+            return str(c)
+    return None
+
+
 class BifrostTrayApp(toga.App):
     """Background tray application that stays resident and provides menu access."""
 
@@ -18,39 +31,45 @@ class BifrostTrayApp(toga.App):
         self._platform = get_platform()
         self._db = Database(self._platform.db_path())
 
-        # Status commands
-        status_cmd = toga.Command(
+        # Use the Bifrost icon for the tray if available
+        icon_path = _find_icon_path()
+        icon = toga.Icon(icon_path) if icon_path else toga.Icon.DEFAULT_ICON
+
+        tray_icon = toga.statusicons.MenuStatusIcon(
+            icon=icon,
+            text="Bifrost",
+        )
+        self.status_icons.add(tray_icon)
+
+        # Commands attached to the tray menu via the MenuStatusIcon as group
+        toga.Command(
             self._show_status,
             text="Status",
-            group=toga.Group.COMMANDS,
+            group=tray_icon,
+            order=1,
         )
-        prefs_cmd = toga.Command(
+        toga.Command(
             self._show_preferences,
             text="Preferences",
-            group=toga.Group.COMMANDS,
+            group=tray_icon,
+            order=2,
         )
-        quit_cmd = toga.Command(
+        toga.Command(
             self._quit,
             text="Quit Bifrost",
-            group=toga.Group.COMMANDS,
+            group=tray_icon,
+            order=99,
         )
 
-        self.status_icons.add(
-            toga.statusicons.MenuStatusIcon(
-                icon=toga.Icon.DEFAULT_ICON,
-                commands=[status_cmd, prefs_cmd, quit_cmd],
-            )
-        )
-
-        # No main window — tray-only app
-        self.main_window = None
+        # Background app — no dock icon, tray only
+        self.main_window = toga.App.BACKGROUND
 
     def _show_status(self, command, **kwargs):
         handler = self._platform.get_current_handler()
         rule_count = len(self._db.list_rules())
         browser_count = len(self._db.list_browsers())
 
-        self.main_window = toga.MainWindow(title="Bifrost Status", size=(400, 250))
+        window = toga.Window(title="Bifrost Status", size=(400, 250))
 
         labels = [
             f"Handler: {handler or 'not registered'}",
@@ -59,15 +78,15 @@ class BifrostTrayApp(toga.App):
             f"Data: {self._platform.data_dir()}",
         ]
 
-        content = toga.Box(style=Pack(direction=COLUMN, padding=16))
+        content = toga.Box(style=Pack(direction=COLUMN, margin=16))
         for text in labels:
-            content.add(toga.Label(text, style=Pack(padding_bottom=8)))
+            content.add(toga.Label(text, style=Pack(margin_bottom=8)))
 
-        close_btn = toga.Button("Close", on_press=lambda w: self.main_window.close())
+        close_btn = toga.Button("Close", on_press=lambda w: window.close())
         content.add(close_btn)
 
-        self.main_window.content = content
-        self.main_window.show()
+        window.content = content
+        window.show()
 
     def _show_preferences(self, command, **kwargs):
         if sys.platform == "darwin":
@@ -89,5 +108,8 @@ class BifrostTrayApp(toga.App):
 
 def run_tray():
     """Run the Bifrost system tray application."""
-    app = BifrostTrayApp("Bifrost", "org.bifrost.tray")
+    app = BifrostTrayApp(
+        "Bifrost",
+        "org.bifrost.tray",
+    )
     app.main_loop()

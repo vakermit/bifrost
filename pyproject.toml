@@ -57,6 +57,7 @@ author_email = "bifrost@example.com"
 [tool.briefcase.app.bifrost]
 formal_name = "Bifrost"
 description = "Route links to the right browser and profile"
+icon = "icons/bifrost"
 sources = ["bifrost"]
 requires = [
     "typer>=0.12.0",
