@@ -1,0 +1,77 @@
+name: Release
+
+on:
+  release:
+    types: [published]
+
+permissions:
+  contents: write
+
+jobs:
+  build-macos:
+    runs-on: macos-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install briefcase
+          pip install -e ".[macos]"
+
+      - name: Create Briefcase project
+        run: briefcase create macOS app
+
+      - name: Build macOS app
+        run: briefcase build macOS app
+
+      - name: Package macOS DMG
+        run: briefcase package macOS app --no-sign
+        # Use --no-sign for CI; real releases need a Developer ID cert
+        # To sign: remove --no-sign and configure CODESIGN_IDENTITY secret
+
+      - name: Upload macOS artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bifrost-macos
+          path: dist/*.dmg
+
+      - name: Attach to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.dmg
+
+  build-windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: |
+          pip install briefcase
+          pip install -e ".[windows]"
+
+      - name: Create Briefcase project
+        run: briefcase create windows app
+
+      - name: Build Windows app
+        run: briefcase build windows app
+
+      - name: Package Windows MSI
+        run: briefcase package windows app
+
+      - name: Upload Windows artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: bifrost-windows
+          path: dist/*.msi
+
+      - name: Attach to GitHub Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: dist/*.msi

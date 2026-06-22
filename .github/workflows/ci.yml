@@ -1,0 +1,63 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: pip install ruff
+      - run: ruff check bifrost/
+      - run: ruff format --check bifrost/
+
+  test:
+    runs-on: ${{ matrix.os }}
+    strategy:
+      matrix:
+        os: [macos-latest, windows-latest]
+        python-version: ["3.11", "3.12", "3.13"]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: ${{ matrix.python-version }}
+      - run: pip install -e ".[dev]"
+      - run: python -c "from bifrost.db import Database; from bifrost.rules import RuleEngine; from bifrost.security import validate_url, validate_regex; print('imports OK')"
+      - run: python -c "from bifrost.platform import get_platform; p = get_platform(); print(f'platform OK - {p.data_dir()}')"
+
+  pii-scan:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - name: Scan for PII patterns
+        run: |
+          # Patterns file is kept outside the repo by maintainers.
+          # This job checks for common leaks: email addresses, absolute
+          # home paths, and corporate domain references in source files.
+          FOUND=0
+          # Real email addresses (not example.com/example.org)
+          if grep -rnE "[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}" \
+            --include="*.py" --include="*.toml" . \
+            | grep -v "example\.\(com\|org\|net\)" \
+            | grep -v "bifrost@"; then
+            echo "::error::Possible email address found in source"
+            FOUND=1
+          fi
+          # Absolute home directory paths
+          if grep -rnE "/Users/[a-zA-Z]|/home/[a-zA-Z]|C:\\\\Users\\\\" \
+            --include="*.py" --include="*.toml" .; then
+            echo "::error::Absolute home path found in source"
+            FOUND=1
+          fi
+          if [ "$FOUND" -eq 1 ]; then exit 1; fi
+          echo "PII scan clean"

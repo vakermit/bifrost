@@ -1,0 +1,87 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "bifrost"
+version = "0.1.0"
+description = "Cross-platform URL handler that routes links to the right browser and profile"
+readme = "README.md"
+license = {text = "MIT"}
+requires-python = ">=3.11"
+dependencies = [
+    "typer>=0.12.0",
+    "rich>=13.0.0",
+    "toga>=0.5.0",
+    "platformdirs>=4.0.0",
+]
+
+[project.optional-dependencies]
+macos = [
+    "pyobjc-core>=10.0",
+    "pyobjc-framework-Cocoa>=10.0",
+    "toga-cocoa>=0.5.0",
+]
+windows = [
+    "toga-winforms>=0.5.0",
+]
+dev = [
+    "pytest>=8.0",
+    "ruff>=0.4.0",
+    "briefcase>=0.4.0",
+]
+
+[project.scripts]
+bifrost = "bifrost.cli:app"
+
+[tool.setuptools.packages.find]
+include = ["bifrost*"]
+
+[tool.ruff]
+target-version = "py311"
+line-length = 100
+
+# --- Briefcase packaging configuration ---
+
+[tool.briefcase]
+project_name = "Bifrost"
+bundle = "org.bifrost"
+version = "0.1.0"
+url = "https://github.com/bifrost-url-handler/bifrost"
+license.file = "LICENSE"
+author = "Bifrost Contributors"
+author_email = "bifrost@example.com"
+
+[tool.briefcase.app.bifrost]
+formal_name = "Bifrost"
+description = "Route links to the right browser and profile"
+sources = ["bifrost"]
+requires = [
+    "typer>=0.12.0",
+    "rich>=13.0.0",
+    "toga>=0.5.0",
+    "platformdirs>=4.0.0",
+]
+
+[tool.briefcase.app.bifrost.macOS]
+requires = [
+    "toga-cocoa>=0.5.0",
+    "pyobjc-core>=10.0",
+    "pyobjc-framework-Cocoa>=10.0",
+]
+
+[tool.briefcase.app.bifrost.macOS.info]
+# Register as URL handler for http and https
+CFBundleURLTypes = [
+    { CFBundleURLName = "Web URL", CFBundleURLSchemes = ["http", "https"] },
+]
+
+[tool.briefcase.app.bifrost.windows]
+requires = [
+    "toga-winforms>=0.5.0",
+]
+
+[tool.briefcase.app.bifrost.linux]
+requires = [
+    "toga-gtk>=0.5.0",
+]
