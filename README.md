@@ -64,6 +64,7 @@ bifrost status
 | `bifrost browser remove <name>` | Remove a browser from the database |
 | `bifrost rule add` | Add a routing rule (see `--help` for options) |
 | `bifrost rule list` | Show all rules in priority order |
+| `bifrost rule import <file>` | Bulk import URLs from YAML, text, or CSV (see below) |
 | `bifrost rule remove <id>` | Delete a rule |
 | `bifrost rule reorder <id> -p <n>` | Change a rule's priority |
 | `bifrost group create <name>` | Create a rule group |
@@ -89,6 +90,24 @@ bifrost/
 ├── platform_base.py    # ABC interface
 ├── platform_macos.py   # macOS: PyObjC, Launch Services
 └── platform_windows.py # Windows: registry
+```
+
+## Bulk Import
+
+Import URLs from any file — YAML configs, text files, CSVs. Bifrost extracts all `http://` and `https://` URLs, deduplicates by domain, and creates rules. Re-running skips existing rules automatically.
+
+```bash
+# Preview what would be imported
+bifrost rule import ~/config.yml --browser chrome --profile "Work" --group "Work Tools" --dry-run
+
+# Import for real
+bifrost rule import ~/config.yml --browser chrome --profile "Work" --group "Work Tools"
+
+# Works with plain text files too (one URL per line)
+bifrost rule import urls.txt --browser firefox --group "Reading List"
+
+# Re-run after file changes — only new domains are added
+bifrost rule import ~/config.yml --browser chrome --profile "Work" --group "Work Tools"
 ```
 
 ## Data Storage
@@ -129,6 +148,14 @@ from a single `pyproject.toml` configuration.
 ## Disclaimer
 
 This software is provided "as is", without warranty of any kind. See the [LICENSE](LICENSE) file for details. Use at your own risk — Bifrost modifies your system's default URL handler, which affects how all applications open links. The authors are not responsible for any issues arising from its use, including but not limited to broken link handling, data loss, or security vulnerabilities.
+
+## Why "Bifrost"?
+
+In Norse mythology, the Bifrost is the burning rainbow bridge that connects Midgard (the world of humans) to Asgard (the realm of the gods). Guarded by Heimdall, it is the only path between realms — every traveler must cross it, and Heimdall decides who may pass.
+
+Bifrost the application serves the same role: every URL must cross through it, and the rules you define decide which realm (browser) each link reaches.
+
+Read more: [The Mythology Behind the Name](doc/mythology.md)
 
 ## Contributing
 
