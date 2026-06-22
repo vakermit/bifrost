@@ -344,6 +344,144 @@ def rule_list():
     console.print(table)
 
 
+@rule_app.command("import")
+def rule_import(
+    file: str = typer.Argument(help="File to import (YAML, text with URLs, or CSV)"),
+    browser: str = typer.Option(..., "--browser", "-b", help="Browser for all imported rules"),
+    profile: str = typer.Option(None, "--profile", help="Profile for all imported rules"),
+    group: str = typer.Option(None, "--group", "-g", help="Group name (created if missing)"),
+    incognito: bool = typer.Option(False, "--incognito", "-i", help="Open in private/incognito mode"),
+    dry_run: bool = typer.Option(False, "--dry-run", help="Show what would be imported without saving"),
+):
+    """Import URL rules from a file.
+
+    Supports YAML (extracts all URLs from values), plain text (one URL per line),
+    or CSV (pattern,pattern_type columns). Extracts domains from URLs and creates
+    domain rules for each unique host.
+    """
+    from pathlib import Path
+    from urllib.parse import urlparse
+
+    file_path = Path(file).expanduser()
+    if not file_path.exists():
+        console.print(f"[red]File not found:[/] {file_path}")
+        raise typer.Exit(1)
+
+    db = _get_db()
+
+    # Resolve browser
+    browser_row = db.get_browser_by_name(browser)
+    if not browser_row:
+        console.print(f"[red]Browser '{browser}' not found.[/] Run [cyan]bifrost discover[/] first.")
+        raise typer.Exit(1)
+
+    # Resolve profile
+    profile_id = None
+    if profile:
+        profiles = db.list_profiles(browser_row["id"])
+        matching = [p for p in profiles if p["name"].lower() == profile.lower()]
+        if not matching:
+            console.print(f"[red]Profile '{profile}' not found for {browser_row['name']}.[/]")
+            raise typer.Exit(1)
+        profile_id = matching[0]["id"]
+
+    # Resolve or create group
+    group_id = None
+    if group:
+        groups = db.list_groups()
+        matching = [g for g in groups if g["name"].lower() == group.lower()]
+        if matching:
+            group_id = matching[0]["id"]
+        elif not dry_run:
+            group_id = db.create_group(group)
+            console.print(f"[green]✓[/] Created group '{group}'")
+
+    # Extract URLs from file
+    content = file_path.read_text(encoding="utf-8")
+    urls = _extract_urls(content, file_path.suffix.lower())
+
+    # Deduplicate by domain
+    domains: dict[str, str] = {}  # domain -> first URL that produced it
+    for url in urls:
+        try:
+            parsed = urlparse(url)
+            host = parsed.hostname
+            if host and host not in domains:
+                domains[host] = url
+        except ValueError:
+            continue
+
+    if not domains:
+        console.print("[yellow]No URLs found in file.[/]")
+        return
+
+    # Show what we'll import
+    table = Table(title=f"{'[DRY RUN] ' if dry_run else ''}Importing {len(domains)} domain rules")
+    table.add_column("Domain", style="cyan")
+    table.add_column("Source URL", style="dim")
+    table.add_column("Browser")
+    table.add_column("Profile")
+
+    for domain, source_url in sorted(domains.items()):
+        table.add_row(
+            f"*.{domain}",
+            source_url[:60] + ("…" if len(source_url) > 60 else ""),
+            browser_row["name"],
+            profile or "-",
+        )
+
+    console.print(table)
+
+    if dry_run:
+        console.print(f"\n[yellow]Dry run — no rules created.[/] Remove --dry-run to import.")
+        return
+
+    created = 0
+    skipped = 0
+    existing_rules = db.list_rules()
+    existing_patterns = {r.pattern.lower() for r in existing_rules}
+
+    for domain in sorted(domains.keys()):
+        pattern = f"*.{domain}"
+        if pattern.lower() in existing_patterns:
+            skipped += 1
+            continue
+        db.add_rule(
+            pattern=pattern,
+            pattern_type="domain",
+            browser_id=browser_row["id"],
+            profile_id=profile_id,
+            group_id=group_id,
+            incognito=incognito,
+        )
+        created += 1
+
+    console.print(f"\n[green]✓[/] Created {created} rules, skipped {skipped} duplicates.")
+
+
+def _extract_urls(content: str, extension: str) -> list[str]:
+    """Extract URLs from file content based on format."""
+    import re
+
+    if extension in (".yml", ".yaml"):
+        # Extract all string values that look like URLs
+        url_pattern = re.compile(r"https?://[^\s'\"]+")
+        return url_pattern.findall(content)
+    elif extension == ".csv":
+        urls = []
+        for line in content.strip().splitlines()[1:]:  # skip header
+            parts = line.split(",")
+            if parts:
+                candidate = parts[0].strip().strip('"')
+                if candidate.startswith("http"):
+                    urls.append(candidate)
+        return urls
+    else:
+        # Plain text or unknown — extract anything that looks like a URL
+        url_pattern = re.compile(r"https?://[^\s'\"]+")
+        return url_pattern.findall(content)
+
+
 @rule_app.command("remove")
 def rule_remove(rule_id: int = typer.Argument(help="Rule ID to remove")):
     """Remove a routing rule."""
