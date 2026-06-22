@@ -92,7 +92,7 @@ class BifrostTrayApp(toga.App):
 
         # Rules table
         table = toga.Table(
-            headings=["#", "Name", "Pattern", "Type", "Browser", "Profile", "Group", "Inc."],
+            columns=["ID", "Name", "Pattern", "Type", "Browser", "Profile", "Group", "Incognito"],
             data=[
                 (
                     str(r.id),
@@ -164,7 +164,7 @@ class BifrostTrayApp(toga.App):
         ))
 
         table = toga.Table(
-            headings=["Name", "Type", "Platform", "Profiles"],
+            columns=["Name", "Type", "Platform", "Profiles"],
             data=[
                 (b["name"], b["browser_type"], b["platform"], str(b["profile_count"]))
                 for b in browsers
