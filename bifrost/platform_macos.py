@@ -218,13 +218,31 @@ class PlatformMacOS(PlatformBase):
         incognito: bool = False,
         incognito_flag: str | None = None,
     ) -> None:
-        cmd = [executable]
+        # On macOS, use `open -na` to handle existing browser sessions correctly.
+        # Direct executable calls lose --profile-directory when Chrome is already running.
+        app_path = self._executable_to_app_path(executable)
+        args = []
         if profile_dir and profile_flag:
-            cmd.extend([profile_flag, profile_dir])
+            args.append(f"{profile_flag}={profile_dir}")
         if incognito and incognito_flag:
-            cmd.append(incognito_flag)
-        cmd.append(url)
+            args.append(incognito_flag)
+        args.append(url)
+
+        cmd = ["/usr/bin/open", "-na", app_path, "--args"] + args
         subprocess.Popen(cmd, start_new_session=True)
+
+    @staticmethod
+    def _executable_to_app_path(executable: str) -> str:
+        """Convert an executable path to its .app bundle path.
+
+        e.g. /Applications/Google Chrome.app/Contents/MacOS/Google Chrome
+           → /Applications/Google Chrome.app
+        """
+        parts = Path(executable).parts
+        for i, part in enumerate(parts):
+            if part.endswith(".app"):
+                return str(Path(*parts[: i + 1]))
+        return executable
 
     def open_default_browser(self, url: str) -> None:
         subprocess.Popen(["/usr/bin/open", url], start_new_session=True)
