@@ -126,7 +126,7 @@ def show_picker_window(url: str, db: Database) -> dict | None:
                     self._regex_input,
                     button_row,
                 ],
-                style=Pack(direction=COLUMN, padding=16),
+                style=Pack(direction=COLUMN, margin=16),
             )
 
             self.main_window.content = content
