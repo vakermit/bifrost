@@ -4,7 +4,7 @@ import re
 from urllib.parse import urlparse
 
 import toga
-from toga.constants import COLUMN, ROW
+from toga.constants import COLUMN, ROW, RIGHT
 from toga.style import Pack
 
 from bifrost.db import Database
@@ -22,7 +22,7 @@ def show_picker_window(url: str, db: Database) -> dict | None:
 
     # Build flat list of selectable options: "Browser" and "Browser — Profile"
     options = []
-    option_map = []  # parallel list mapping index to (browser, profile_or_none)
+    option_map = []
 
     for b in browsers:
         options.append(b["name"])
@@ -40,45 +40,47 @@ def show_picker_window(url: str, db: Database) -> dict | None:
             )
 
             # URL display
-            url_label = toga.Label("URL:", style=Pack(padding_bottom=4, font_weight="bold"))
+            url_label = toga.Label(
+                "URL:", style=Pack(margin_bottom=4, font_weight="bold")
+            )
             url_input = toga.MultilineTextInput(
                 value=url,
                 readonly=True,
-                style=Pack(height=50, padding_bottom=4, font_family="monospace"),
+                style=Pack(height=50, margin_bottom=4, font_family="monospace"),
             )
             copy_btn = toga.Button(
                 "Copy URL",
                 on_press=self._copy_url,
-                style=Pack(alignment="right", padding_bottom=8),
+                style=Pack(margin_bottom=8),
             )
             self._url = url
             self._copy_btn = copy_btn
 
             # Browser/profile selection
             select_label = toga.Label(
-                "Open with:", style=Pack(padding_bottom=4, font_weight="bold")
+                "Open with:", style=Pack(margin_bottom=4, font_weight="bold")
             )
             self._selection = toga.Selection(
                 items=options,
-                style=Pack(padding_bottom=8, flex=1),
+                style=Pack(margin_bottom=8, flex=1),
             )
 
             # Incognito toggle
             self._incognito = toga.Switch(
                 "Open in private / incognito mode",
-                style=Pack(padding_bottom=12),
+                style=Pack(margin_bottom=12),
             )
 
             # Remember section
             remember_label = toga.Label(
                 "Remember this choice:",
-                style=Pack(padding_bottom=4, font_weight="bold"),
+                style=Pack(margin_bottom=4, font_weight="bold"),
             )
-            self._remember = toga.Switch("Remember", style=Pack(padding_bottom=4))
+            self._remember = toga.Switch("Remember", style=Pack(margin_bottom=4))
 
             self._remember_type = toga.Selection(
                 items=["This domain", "This exact URL", "Custom regex"],
-                style=Pack(padding_bottom=4),
+                style=Pack(margin_bottom=4),
             )
 
             try:
@@ -91,23 +93,23 @@ def show_picker_window(url: str, db: Database) -> dict | None:
             self._regex_input = toga.TextInput(
                 value=default_regex,
                 placeholder="Custom regex pattern",
-                style=Pack(padding_bottom=8, flex=1),
+                style=Pack(margin_bottom=8, flex=1),
             )
 
             # Buttons
             open_btn = toga.Button(
                 "Open",
                 on_press=self._on_open,
-                style=Pack(flex=1, padding_right=4),
+                style=Pack(flex=1, margin_right=4),
             )
             cancel_btn = toga.Button(
                 "Cancel",
                 on_press=self._on_cancel,
-                style=Pack(flex=1, padding_left=4),
+                style=Pack(flex=1, margin_left=4),
             )
             button_row = toga.Box(
                 children=[open_btn, cancel_btn],
-                style=Pack(direction=ROW, padding_top=8),
+                style=Pack(direction=ROW, margin_top=8),
             )
 
             content = toga.Box(
@@ -141,7 +143,11 @@ def show_picker_window(url: str, db: Database) -> dict | None:
             self._copy_btn.text = "Copied!"
 
         def _on_open(self, widget):
-            idx = options.index(self._selection.value) if self._selection.value in options else -1
+            idx = (
+                options.index(self._selection.value)
+                if self._selection.value in options
+                else -1
+            )
             if idx < 0:
                 return
 
@@ -156,12 +162,14 @@ def show_picker_window(url: str, db: Database) -> dict | None:
                 "incognito_flag": browser["incognito_flag"],
             }
             if profile:
-                choice.update({
-                    "profile": profile["name"],
-                    "profile_id": profile["id"],
-                    "profile_dir": profile["directory"],
-                    "profile_flag": browser["profile_flag"],
-                })
+                choice.update(
+                    {
+                        "profile": profile["name"],
+                        "profile_id": profile["id"],
+                        "profile_dir": profile["directory"],
+                        "profile_flag": browser["profile_flag"],
+                    }
+                )
 
             if self._remember.value:
                 _save_remember_rule(
@@ -187,8 +195,12 @@ def show_picker_window(url: str, db: Database) -> dict | None:
 
 
 def _save_remember_rule(
-    db: Database, url: str, remember_type: str, custom_regex: str,
-    choice: dict, incognito: bool,
+    db: Database,
+    url: str,
+    remember_type: str,
+    custom_regex: str,
+    choice: dict,
+    incognito: bool,
 ):
     """Save a 'remember' choice as a new rule."""
     if remember_type == "This exact URL":

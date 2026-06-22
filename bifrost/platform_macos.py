@@ -245,4 +245,6 @@ class PlatformMacOS(PlatformBase):
         return executable
 
     def open_default_browser(self, url: str) -> None:
-        subprocess.Popen(["/usr/bin/open", url], start_new_session=True)
+        subprocess.Popen(
+            ["/usr/bin/open", "-u", url], start_new_session=True
+        )
