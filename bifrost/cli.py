@@ -64,15 +64,31 @@ def install():
             raise typer.Exit(1)
     else:
         # macOS: register via Launch Services
-        # For now, use a placeholder bundle ID — real install needs the .app bundle
-        bundle_id = "com.bifrost.handler"
+        from pathlib import Path
+
+        bundle_id = "org.bifrost.bifrost"
+        app_path = Path("/Applications/Bifrost.app")
+
+        if not app_path.exists():
+            console.print("[red]✗[/] Bifrost.app not found in /Applications/")
+            console.print("Build and install first:")
+            console.print("  briefcase build macOS app")
+            console.print("  cp -r build/bifrost/macos/app/Bifrost.app /Applications/")
+            raise typer.Exit(1)
+
         success = platform.register_handler(bundle_id)
         if success:
             console.print(f"[green]✓[/] Registered as default HTTP/HTTPS handler.")
         else:
-            console.print("[red]✗[/] Failed to register. The .app bundle may need to be installed first.")
-            console.print("Run: bifrost install --bundle /path/to/Bifrost.app")
-            raise typer.Exit(1)
+            console.print("[yellow]![/] macOS requires manual confirmation on Ventura+.")
+
+        console.print()
+        console.print("To complete setup, open:")
+        console.print("  [cyan]System Settings → Desktop & Dock → Default web browser[/]")
+        console.print("  Select [bold]Bifrost[/] from the dropdown.")
+        console.print()
+        console.print("Or run:")
+        console.print("  [cyan]open x-apple.systempreferences:com.apple.Desktop-Settings.extension[/]")
 
 
 @app.command()

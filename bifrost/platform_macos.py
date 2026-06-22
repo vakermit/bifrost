@@ -151,32 +151,23 @@ class PlatformMacOS(PlatformBase):
                     )
         return profiles
 
-    def register_handler(self, bundle_path: str) -> bool:
+    def register_handler(self, bundle_id: str) -> bool:
         try:
+            from CoreServices import (
+                LSCopyDefaultHandlerForURLScheme,
+                LSSetDefaultHandlerForURLScheme,
+            )
+
             # Store current handler before overwriting
-            current = self.get_current_handler()
+            current = str(LSCopyDefaultHandlerForURLScheme("http") or "")
             if current:
                 prev_file = self.data_dir() / "previous_handler.txt"
                 prev_file.write_text(current, encoding="utf-8")
 
-            result = subprocess.run(
-                [
-                    "/usr/bin/python3",
-                    "-c",
-                    (
-                        "from Foundation import NSBundle; "
-                        "from LaunchServices import LSSetDefaultHandlerForURLScheme; "
-                        f"r1 = LSSetDefaultHandlerForURLScheme('http', '{bundle_path}'); "
-                        f"r2 = LSSetDefaultHandlerForURLScheme('https', '{bundle_path}'); "
-                        "print(f'{r1},{r2}')"
-                    ),
-                ],
-                capture_output=True,
-                text=True,
-                timeout=10,
-            )
-            return "0,0" in result.stdout
-        except (subprocess.SubprocessError, OSError):
+            r1 = LSSetDefaultHandlerForURLScheme("http", bundle_id)
+            r2 = LSSetDefaultHandlerForURLScheme("https", bundle_id)
+            return r1 == 0 and r2 == 0
+        except (ImportError, OSError):
             return False
 
     def unregister_handler(self) -> bool:
@@ -190,23 +181,11 @@ class PlatformMacOS(PlatformBase):
 
     def get_current_handler(self) -> str | None:
         try:
-            result = subprocess.run(
-                [
-                    "/usr/bin/python3",
-                    "-c",
-                    (
-                        "from LaunchServices import LSCopyDefaultHandlerForURLScheme; "
-                        "h = LSCopyDefaultHandlerForURLScheme('http'); "
-                        "print(h or '')"
-                    ),
-                ],
-                capture_output=True,
-                text=True,
-                timeout=10,
-            )
-            handler = result.stdout.strip()
-            return handler if handler else None
-        except (subprocess.SubprocessError, OSError):
+            from CoreServices import LSCopyDefaultHandlerForURLScheme
+
+            handler = LSCopyDefaultHandlerForURLScheme("http")
+            return str(handler) if handler else None
+        except (ImportError, OSError):
             return None
 
     def launch_browser(
