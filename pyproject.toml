@@ -7,7 +7,8 @@ name = "bifrost"
 version = "0.1.0"
 description = "Cross-platform URL handler that routes links to the right browser and profile"
 readme = "README.md"
-license = {text = "MIT"}
+license = "MIT"
+license-files = ["LICENSE"]
 requires-python = ">=3.11"
 dependencies = [
     "typer>=0.12.0",
@@ -48,7 +49,8 @@ project_name = "Bifrost"
 bundle = "org.bifrost"
 version = "0.1.0"
 url = "https://github.com/bifrost-url-handler/bifrost"
-license.file = "LICENSE"
+license = "MIT"
+license-files = ["LICENSE"]
 author = "Bifrost Contributors"
 author_email = "bifrost@example.com"
 
